@@ -1,24 +1,39 @@
-import logo from './logo.svg';
-import './App.css';
+// src/App.jsx
+import React, { useState } from "react";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
+  const [user, setUser] = useState(null);
+  const [view, setView] = useState("home"); // "home" | "login" | "app"
+
+  const handleLogin = (userData) => {
+    setUser(userData);
+    setView("app");
+  };
+
+  if (!user && view === "home") {
+    return (
+      <Home
+        onGetStarted={() => setView("login")}
+        onLoginClick={() => setView("login")}
+      />
+    );
+  }
+
+  if (!user && view === "login") {
+    return <Login onLogin={handleLogin} />;
+  }
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Dashboard
+      user={user}
+      onLogout={() => {
+        setUser(null);
+        setView("home");
+      }}
+    />
   );
 }
 
