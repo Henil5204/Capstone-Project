@@ -5,8 +5,13 @@ const Shift = require("../models/Shift");
 const SwapRequest = require("../models/SwapRequest");
 const { protect, authorize } = require("../middleware/auth");
 
+<<<<<<< HEAD
 // ── GET /api/users/employees – All employees (any logged-in user)
 router.get("/employees", protect, async (req, res) => {
+=======
+// ── GET /api/users/employees – All employees (manager/owner)
+router.get("/employees", protect, authorize("manager", "owner"), async (req, res) => {
+>>>>>>> f9f616b1 (updated project)
   try {
     const employees = await User.find({ role: "employee", isActive: true })
       .select("-password")
@@ -135,4 +140,8 @@ router.get("/reports/weekly", protect, authorize("manager", "owner"), async (req
   }
 });
 
+<<<<<<< HEAD
 module.exports = router;
+=======
+module.exports = router;
+>>>>>>> f9f616b1 (updated project)
