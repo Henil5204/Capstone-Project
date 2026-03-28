@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api";
 import "../../App.css";
+import { useLanguage } from "../../context/LanguageContext";
 
 export default function ShiftSwap({ user }) {
+  const { t } = useLanguage();
   const [employees, setEmployees] = useState([]);
   const [myShifts, setMyShifts] = useState([]);
   const [myRequests, setMyRequests] = useState([]);
@@ -93,7 +95,7 @@ export default function ShiftSwap({ user }) {
         reason: form.reason,
         coverageNote: form.coverageNote,
       });
-      setMsg("Swap request submitted successfully!");
+      setMsg(t("swapSubmitted"));
       setForm({ shiftId: "", proposedEmployeeId: "", reason: "", coverageNote: "" });
       fetchMyRequests();
     } catch (e) {
@@ -200,7 +202,7 @@ export default function ShiftSwap({ user }) {
             </div>
 
             <button className="su-btn su-btn-black su-btn-pill" onClick={handleSubmit} disabled={loading}>
-              {loading ? <span className="spinner" /> : "Submit Request"}
+              {loading ? <span className="spinner" /> : {t("submitRequest")}}
             </button>
           </div>
         </div>
