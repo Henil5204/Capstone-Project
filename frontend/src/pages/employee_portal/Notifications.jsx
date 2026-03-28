@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api";
 import "../../App.css";
+import { useLanguage } from "../../context/LanguageContext";
 
-export default function Notifications({ onRead }) {
+export default function Notifications({
+  const { t } = useLanguage(); onRead }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
