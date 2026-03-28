@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api";
 import "../../App.css";
+import { useLanguage } from "../../context/LanguageContext";
 
 const ROLE_COLORS = {
   Waitstaff:       "#4f46e5",
@@ -38,6 +39,7 @@ function calcHours(start, end) {
 const DAY_NAMES = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
 
 export default function Schedule({ user }) {
+  const { t } = useLanguage();
   const [shifts, setShifts]         = useState([]);
   const [loading, setLoading]       = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
