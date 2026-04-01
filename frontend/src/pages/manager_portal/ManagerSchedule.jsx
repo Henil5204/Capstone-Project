@@ -16,16 +16,17 @@ const ROLE_COLORS = {
 };
 const ROLES    = Object.keys(ROLE_COLORS);
 const rc       = (r) => ROLE_COLORS[r] || { bg:"#6b7280", light:"#f3f4f6" };
-const DAY_NAMES = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
-const AREAS    = ["Front","Bar","Kitchen","Patio","Drive-Thru","Back","Counter"];
+const DAY_T_KEYS = ["mon","tue","wed","thu","fri","sat","sun"];
+const AREA_EN  = ["Front","Bar","Kitchen","Patio","Drive-Thru","Back","Counter"];
+const AREA_KEYS= ["areaFront","areaBar","areaKitchen","areaPatio","areaDriveThru","areaBack","areaCounter"];
 const PRESET_TIMES = [
-  { label:"Morning   6A–2P",  start:"06:00", end:"14:00" },
+  { label:"Morning   6A–2P", labelKey:"morningShift",  start:"06:00", end:"14:00" },
   { label:"Day       9A–5P",  start:"09:00", end:"17:00" },
   { label:"Swing    11A–7P",  start:"11:00", end:"19:00" },
   { label:"Afternoon 12P–8P", start:"12:00", end:"20:00" },
   { label:"Evening   5P–11P", start:"17:00", end:"23:00" },
   { label:"Night     7P–3A",  start:"19:00", end:"03:00" },
-  { label:"Custom",           start:"",      end:""       },
+  { label:"Custom", start:"", end:"" },
 ];
 
 function fmt12(t) {
@@ -105,7 +106,7 @@ function ShiftModal({ emp, date, shift, onSave, onDelete, onClose }) {
             <div style={{ fontSize:11, fontWeight:700, color:"#aaa", textTransform:"uppercase",
               letterSpacing:1, marginBottom:8 }}>Quick Select</div>
             <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-              {PRESET_TIMES.filter(p=>p.label!=="Custom").map(p => (
+              {PRESET_TIMES.map(p => (
                 <button key={p.label} onClick={() => applyPreset(p.label)}
                   style={{ padding:"5px 11px", border:"1.5px solid", borderRadius:20, cursor:"pointer",
                     fontSize:11, fontWeight:600,
@@ -478,7 +479,7 @@ export default function ManagerSchedule({ user }) {
                 borderRight: i<6?"1px solid #f0f0ec":"none"
               }}>
                 <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase",
-                  letterSpacing:1, color: isToday?"#1a1a1a":"#aaa" }}>{DAY_NAMES[i]}</div>
+                  letterSpacing:1, color: isToday?"#1a1a1a":"#aaa" }}>{t(DAY_T_KEYS[i])}</div>
                 <div style={{ fontSize:22, fontWeight:900, color: isToday?"#1a1a1a":"#222", lineHeight:1.2 }}>
                   {d.getDate()}
                 </div>
@@ -534,7 +535,7 @@ export default function ManagerSchedule({ user }) {
                 </div>
                 <div style={{ marginTop:6, fontSize:10, fontWeight:600,
                   color: weekMins > 0 ? "#22c55e":"#ddd" }}>
-                  {weekMins > 0 ? `${fmtHrs(weekMins)} this week` : "No shifts"}
+                  {weekMins > 0 ? `${fmtHrs(weekMins)} ${t("thisWeekHrs")}` : t("noShiftsWeekManager")}
                 </div>
               </div>
 
