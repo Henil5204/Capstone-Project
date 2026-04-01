@@ -15,6 +15,41 @@ const ROLE_COLORS = {
   default:         "#6b7280",
 };
 
+const ROLE_KEYS = {
+  Waitstaff:       "roleWaitstaff",
+  Dishwasher:      "roleDishwasher",
+  "Kitchen Staff": "roleKitchenStaff",
+  Bartender:       "roleBartender",
+  Manager:         "roleManager",
+  Server:          "roleServer",
+  Cook:            "roleCook",
+  Host:            "roleHost",
+};
+
+const STATUS_KEYS = {
+  scheduled:  "statusScheduled",
+  swapped:    "statusSwapped",
+  "no-show":  "statusNoShow",
+  noshow:     "statusNoShow",
+  draft:      "statusDraft",
+  published:  "statusPublished",
+  pending:    "statusPending",
+  approved:   "statusApproved",
+  rejected:   "statusRejected",
+};
+
+const AREA_KEYS = {
+  Front:        "areaFront",
+  Bar:          "areaBar",
+  Kitchen:      "areaKitchen",
+  Patio:        "areaPatio",
+  "Drive-Thru": "areaDriveThru",
+  Back:         "areaBack",
+  Counter:      "areaCounter",
+};
+
+const LOCALE_MAP = { en:"en", es:"es", fr:"fr", pt:"pt", hi:"hi", ja:"ja", zh:"zh-Hans", mr:"mr", ko:"ko" };
+
 const getColor = (role) => ROLE_COLORS[role] || ROLE_COLORS.default;
 
 function fmt12(t) {
@@ -36,10 +71,12 @@ function calcHours(start, end) {
   return m ? `${h}h ${m}m` : `${h}h`;
 }
 
-const DAY_NAMES = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
+const DAY_T_KEYS = ["mon","tue","wed","thu","fri","sat","sun"];
 
 export default function Schedule({ user }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const locale = LOCALE_MAP[lang] || "en";
+
   const [shifts, setShifts]         = useState([]);
   const [loading, setLoading]       = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -60,7 +97,7 @@ export default function Schedule({ user }) {
   const isoDate = (d) => d.toISOString().split("T")[0];
   const today   = isoDate(new Date());
 
-  const weekLabel = `${days[0].toLocaleDateString("en",{month:"short",day:"numeric"})} – ${days[6].toLocaleDateString("en",{month:"short",day:"numeric",year:"numeric"})}`;
+  const weekLabel = `${days[0].toLocaleDateString(locale,{month:"short",day:"numeric"})} – ${days[6].toLocaleDateString(locale,{month:"short",day:"numeric",year:"numeric"})}`;
 
   useEffect(() => {
     (async () => {
@@ -94,8 +131,12 @@ export default function Schedule({ user }) {
   const name = user?.name || `${user?.firstName||""} ${user?.lastName||""}`.trim();
   const initials = name.split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2);
 
+  const tRole   = (role)   => role   ? (t(ROLE_KEYS[role])   || role)   : "";
+  const tArea   = (area)   => area   ? (t(AREA_KEYS[area])   || area)   : "";
+  const tStatus = (status) => status ? (t(STATUS_KEYS[status?.toLowerCase()]) || status) : "";
+
   return (
-    <div className="su-page" style={{ fontFamily:"'DM Sans', sans-serif" }}>
+    <div className="su-page" style={{ fontFamily:"var(--font-body)" }}>
 
       {/* ── TOP BAR ── */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12, marginBottom:18 }}>
@@ -114,22 +155,21 @@ export default function Schedule({ user }) {
             style={{ background:"#f0f0ec", border:"none", borderRadius:8, padding:"7px 14px", cursor:"pointer", fontWeight:600, fontSize:13 }}>‹</button>
           <button onClick={() => setWeekOffset(0)}
             style={{ background: weekOffset===0 ? "#f5b800":"#f0f0ec", border:"none", borderRadius:8,
-              padding:"7px 14px", cursor:"pointer", fontWeight:700, fontSize:13 }}>Today</button>
+              padding:"7px 14px", cursor:"pointer", fontWeight:700, fontSize:13 }}>{t("today")}</button>
           <span style={{ fontWeight:700, fontSize:14, padding:"0 6px", color:"#2563eb" }}>{weekLabel}</span>
           <button onClick={() => setWeekOffset(o=>o+1)}
             style={{ background:"#f0f0ec", border:"none", borderRadius:8, padding:"7px 14px", cursor:"pointer", fontWeight:600, fontSize:13 }}>›</button>
         </div>
 
-        {/* weekly hours pill */}
         <div style={{ background:"#1a1a1a", borderRadius:10, padding:"8px 18px", display:"flex", gap:14 }}>
           <div style={{ textAlign:"center" }}>
             <div style={{ color:"#f5b800", fontWeight:800, fontSize:18 }}>{shifts.length}</div>
-            <div style={{ color:"#888", fontSize:10 }}>SHIFTS</div>
+            <div style={{ color:"#888", fontSize:10 }}>{t("shiftsLabel")}</div>
           </div>
           <div style={{ width:1, background:"#333" }} />
           <div style={{ textAlign:"center" }}>
             <div style={{ color:"#f5b800", fontWeight:800, fontSize:18 }}>{totalHoursLabel}</div>
-            <div style={{ color:"#888", fontSize:10 }}>HOURS</div>
+            <div style={{ color:"#888", fontSize:10 }}>{t("hoursLabel")}</div>
           </div>
         </div>
       </div>
@@ -149,7 +189,7 @@ export default function Schedule({ user }) {
                 borderRight: i < 6 ? "1px solid #f0f0ec" : "none"
               }}>
                 <div style={{ fontSize:10, fontWeight:700, letterSpacing:1, textTransform:"uppercase",
-                  color: isToday ? "#1a1a1a" : "#aaa" }}>{DAY_NAMES[i]}</div>
+                  color: isToday ? "#1a1a1a" : "#aaa" }}>{t(DAY_T_KEYS[i])}</div>
                 <div style={{ fontSize:26, fontWeight:900, lineHeight:1.1,
                   color: isToday ? "#1a1a1a" : "#222" }}>{d.getDate()}</div>
                 {isToday && (
@@ -162,7 +202,7 @@ export default function Schedule({ user }) {
 
         {/* Shift cells */}
         {loading ? (
-          <div style={{ padding:60, textAlign:"center", color:"#aaa" }}>Loading your schedule…</div>
+          <div style={{ padding:60, textAlign:"center", color:"#aaa" }}>{t("loadingSchedule")}</div>
         ) : (
           <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", minHeight:280 }}>
             {days.map((d, i) => {
@@ -186,40 +226,37 @@ export default function Schedule({ user }) {
                     <div style={{ height:"100%", display:"flex", alignItems:"center", justifyContent:"center",
                       flexDirection:"column", paddingTop:40 }}>
                       <div style={{ fontSize:28, color:"#e5e5e5" }}>–</div>
-                      <div style={{ fontSize:10, color:"#ddd", marginTop:4, fontWeight:600 }}>OFF</div>
+                      <div style={{ fontSize:10, color:"#ddd", marginTop:4, fontWeight:600 }}>{t("off")}</div>
                     </div>
                   ) : (
                     dayShifts.map((s) => {
                       const bg  = getColor(s.role);
                       const hrs = calcHours(s.startTime, s.endTime);
                       const timeStr = `${fmt12(s.startTime)} – ${fmt12(s.endTime)}`;
+                      const showStatus = s.status && s.status.toLowerCase() !== "scheduled";
                       return (
                         <div key={s._id} style={{
-                          background: bg,
-                          borderRadius: 8,
-                          padding: "9px 10px",
-                          marginBottom: 6,
-                          boxShadow: `0 3px 8px ${bg}55`,
-                          cursor: "default",
+                          background: bg, borderRadius:8, padding:"9px 10px",
+                          marginBottom:6, boxShadow:`0 3px 8px ${bg}55`, cursor:"default",
                         }}>
                           <div style={{ color:"#fff", fontSize:11, fontWeight:700, marginBottom:1 }}>
                             {timeStr}{hrs ? ` · ${hrs}` : ""}
                           </div>
                           <div style={{ color:"rgba(255,255,255,.9)", fontSize:12, fontWeight:800, marginTop:3 }}>
-                            {s.role}
+                            {tRole(s.role)}
                           </div>
                           {s.area && (
                             <div style={{ color:"rgba(255,255,255,.75)", fontSize:10, marginTop:2 }}>
-                              {s.area}
+                              {tArea(s.area)}
                             </div>
                           )}
-                          {s.status && s.status !== "scheduled" && (
+                          {showStatus && (
                             <div style={{
                               marginTop:6, display:"inline-block",
                               background:"rgba(0,0,0,.2)", color:"#fff",
                               fontSize:9, padding:"2px 7px", borderRadius:20,
                               textTransform:"uppercase", fontWeight:700, letterSpacing:.5
-                            }}>{s.status}</div>
+                            }}>{tStatus(s.status)}</div>
                           )}
                         </div>
                       );
@@ -237,7 +274,7 @@ export default function Schedule({ user }) {
         {Object.entries(ROLE_COLORS).filter(([k])=>k!=="default").map(([role, bg]) => (
           <div key={role} style={{ display:"flex", alignItems:"center", gap:5 }}>
             <div style={{ width:10, height:10, borderRadius:3, background:bg }} />
-            <span style={{ fontSize:11, color:"#888" }}>{role}</span>
+            <span style={{ fontSize:11, color:"#888" }}>{tRole(role)}</span>
           </div>
         ))}
       </div>
@@ -247,28 +284,27 @@ export default function Schedule({ user }) {
         <div style={{ marginTop:16, background:"#fff", borderRadius:14, padding:"14px 20px",
           boxShadow:"0 2px 8px rgba(0,0,0,.05)", display:"flex", gap:8, flexWrap:"wrap" }}>
           <div style={{ fontWeight:700, fontSize:13, color:"#1a1a1a", marginRight:8, alignSelf:"center" }}>
-            This Week:
+            {t("weekSummary")}
           </div>
           {shifts.map((s) => {
             const bg  = getColor(s.role);
-            const dateLabel = new Date(s.date).toLocaleDateString("en",{weekday:"short",month:"short",day:"numeric"});
+            const dateLabel = new Date(s.date).toLocaleDateString(locale,{weekday:"short",month:"short",day:"numeric"});
             const hrs = calcHours(s.startTime, s.endTime);
             return (
               <div key={s._id} style={{
-                background: bg + "18", border: `1.5px solid ${bg}44`,
+                background: bg + "18", border:`1.5px solid ${bg}44`,
                 borderRadius:8, padding:"6px 12px", fontSize:12
               }}>
                 <span style={{ fontWeight:700, color:bg }}>{dateLabel}</span>
                 <span style={{ color:"#666", marginLeft:6 }}>
                   {fmt12(s.startTime)}–{fmt12(s.endTime)}{hrs ? ` (${hrs})` : ""}
                 </span>
-                <span style={{ marginLeft:6, color:"#999" }}>· {s.role}</span>
+                <span style={{ marginLeft:6, color:"#999" }}>· {tRole(s.role)}</span>
               </div>
             );
           })}
         </div>
       )}
-
     </div>
   );
 }
