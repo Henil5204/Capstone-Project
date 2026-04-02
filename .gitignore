@@ -7,3 +7,4 @@ node_modules/
 frontend/build/
 backend/node_modules/
 backend/.env
+backend/.env.example
