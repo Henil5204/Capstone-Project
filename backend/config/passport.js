@@ -50,54 +50,6 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   console.log("⚠️  Google OAuth disabled — add GOOGLE_CLIENT_ID to .env to enable");
 }
 
-// ── Apple OAuth (only if credentials are set in .env) ─────────────────────
-if (process.env.APPLE_CLIENT_ID) {
-  const AppleStrategy = require("passport-apple").Strategy;
-
-  passport.use(new AppleStrategy(
-    {
-      clientID:           process.env.APPLE_CLIENT_ID,
-      teamID:             process.env.APPLE_TEAM_ID,
-      keyID:              process.env.APPLE_KEY_ID,
-      privateKeyLocation: process.env.APPLE_PRIVATE_KEY_PATH,
-      callbackURL:        process.env.APPLE_CALLBACK_URL || "http://localhost:5000/api/auth/apple/callback",
-      passReqToCallback:  true,
-    },
-    async (req, accessToken, refreshToken, idToken, profile, done) => {
-      try {
-        const bodyUser  = req.body?.user ? JSON.parse(req.body.user) : {};
-        const email     = idToken?.email || bodyUser?.email;
-        const firstName = bodyUser?.name?.firstName || "Apple";
-        const lastName  = bodyUser?.name?.lastName  || "User";
-        const appleId   = idToken?.sub;
-        const role      = ["employee", "manager", "owner"].includes(req.query?.role)
-                          ? req.query.role : "employee";
-
-        if (!email && !appleId) return done(new Error("No identifier from Apple"), null);
-
-        let user = email ? await User.findOne({ email }) : await User.findOne({ appleId });
-        if (user) {
-          if (!user.appleId) { user.appleId = appleId; await user.save(); }
-        } else {
-          user = await User.create({
-            firstName, lastName, appleId, role,
-            email: email || `apple_${appleId}@shiftup.local`,
-            availability: "Full-Time",
-            password: Math.random().toString(36) + Date.now().toString(36),
-            oauthProvider: "apple",
-          });
-        }
-        return done(null, user);
-      } catch (err) {
-        return done(err, null);
-      }
-    }
-  ));
-  console.log("✅ Apple OAuth enabled");
-} else {
-  console.log("⚠️  Apple OAuth disabled — add APPLE_CLIENT_ID to .env to enable");
-}
-
 passport.serializeUser((user, done) => done(null, user._id));
 passport.deserializeUser(async (id, done) => {
   try { done(null, await User.findById(id)); } catch (e) { done(e, null); }
