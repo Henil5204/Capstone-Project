@@ -14,6 +14,7 @@ import OAuthCallback      from "./pages/employee_login/OAuthCallback";
 import EmployeePortal     from "./pages/employee_portal/EmployeePortal";
 import ManagerPortal      from "./pages/manager_portal/ManagerPortal";
 import SubscriptionPage   from "./pages/subscription/SubscriptionPage";
+import PaymentPage        from "./pages/payment/PaymentPage";
 import { SubscriptionSuccess, SubscriptionCancel } from "./pages/subscription/SubscriptionRedirects";
 import TrialPrompt        from "./components/TrialPrompt";
 
@@ -23,13 +24,14 @@ function AppRoutes() {
 
   const getInitialPage = () => {
     const path = window.location.pathname;
-    if (path === "/oauth/callback")         return "oauthCallback";
-    if (path === "/pricing")                return "pricing";
-    if (path === "/subscription")           return "subscription";
-    if (path === "/subscription/success")   return "subSuccess";
-    if (path === "/subscription/cancel")    return "subCancel";
-    if (path === "/forgot-password")        return "forgotPassword";
-    if (path.startsWith("/reset-password")) return "resetPassword";
+    if (path === "/oauth/callback")          return "oauthCallback";
+    if (path === "/pricing")                 return "pricing";
+    if (path === "/payment")                 return "payment";
+    if (path === "/subscription")            return "subscription";
+    if (path === "/subscription/success")    return "subSuccess";
+    if (path === "/subscription/cancel")     return "subCancel";
+    if (path === "/forgot-password")         return "forgotPassword";
+    if (path.startsWith("/reset-password"))  return "resetPassword";
     return "home";
   };
 
@@ -56,13 +58,18 @@ function AppRoutes() {
   if (page === "forgotPassword") return <ForgotPassword onBack={() => nav("login")} />;
   if (page === "resetPassword")  return <ResetPassword />;
 
+  // ── Payment page — accessible when logged in ───────────────────────────────
+  if (page === "payment" && user) {
+    return <PaymentPage onBack={() => nav("subscription")} onSuccess={() => nav("subscription")} />;
+  }
+
   // ── Authenticated ──────────────────────────────────────────────────────────
   if (user) {
     return (
       <>
-        {showTrial && <TrialPrompt onClose={dismissTrial} />}
-        {page === "subscription" && <SubscriptionPage />}
-        {page === "pricing"      && <Pricing onGetStarted={() => setShowGetStarted(true)} onLoginClick={() => nav("login")} />}
+        {showTrial && <TrialPrompt onClose={dismissTrial} onStartTrial={() => { dismissTrial(); nav("payment"); }} />}
+        {page === "subscription" && <SubscriptionPage onStartTrial={() => nav("payment")} />}
+        {page === "pricing"      && <Pricing onGetStarted={() => nav("payment")} onLoginClick={() => nav("login")} />}
         {page !== "subscription" && page !== "pricing" && (
           user.role === "manager" || user.role === "owner"
             ? <ManagerPortal onSubscription={() => nav("subscription")} />
@@ -75,17 +82,17 @@ function AppRoutes() {
   // ── Public ─────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Get Started modal — register as owner + start trial */}
       {showGetStarted && (
         <GetStartedModal
           onClose={() => setShowGetStarted(false)}
           onAlreadyHaveAccount={() => { setShowGetStarted(false); nav("login"); }}
+          onProceedToPayment={() => { setShowGetStarted(false); nav("payment"); }}
         />
       )}
-
       {page === "login"    && <Login    onRegisterClick={() => nav("register")} onHomeClick={() => nav("home")} onForgotPassword={() => nav("forgotPassword")} />}
       {page === "register" && <Register onLoginClick={() => nav("login")} onHomeClick={() => nav("home")} />}
       {page === "pricing"  && <Pricing  onGetStarted={() => setShowGetStarted(true)} onLoginClick={() => nav("login")} />}
+      {page === "payment"  && <Login    onRegisterClick={() => nav("register")} onHomeClick={() => nav("home")} onForgotPassword={() => nav("forgotPassword")} />}
       {page === "home"     && (
         <Home
           onGetStarted={() => setShowGetStarted(true)}
