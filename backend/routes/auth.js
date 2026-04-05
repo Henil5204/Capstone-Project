@@ -1,24 +1,8 @@
-const express    = require("express");
-const router     = express.Router();
-const passport   = require("passport");
-const crypto     = require("crypto");
-const User       = require("../models/User");
+const express  = require("express");
+const router   = express.Router();
+const passport = require("passport");
+const User     = require("../models/User");
 const { protect, generateToken } = require("../middleware/auth");
-
-function oauthSuccess(user, res) {
-  const token = generateToken(user._id);
-  const data  = encodeURIComponent(JSON.stringify({
-    token,
-    user: {
-      id: user._id, firstName: user.firstName, lastName: user.lastName,
-      email: user.email, role: user.role, position: user.position || "",
-      availability: user.availability || "Full-Time", avatar: user.avatar || null,
-      subscriptionStatus: user.subscriptionStatus || "free",
-    },
-  }));
-  const FRONT = process.env.FRONTEND_URL || "http://localhost:3000";
-  res.redirect(`${FRONT}/oauth/callback?data=${data}`);
-}
 
 // POST /api/auth/register
 router.post("/register", async (req, res) => {
@@ -28,13 +12,9 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ success: false, message: "All fields required" });
     if (await User.findOne({ email }))
       return res.status(400).json({ success: false, message: "Email already registered" });
-
     const user  = await User.create({ firstName, lastName, email, password, role, position: position || "", availability: availability || "Full-Time" });
     const token = generateToken(user._id);
-    res.status(201).json({
-      success: true, token,
-      user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, position: user.position, availability: user.availability, subscriptionStatus: user.subscriptionStatus },
-    });
+    res.status(201).json({ success: true, token, user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, position: user.position, subscriptionStatus: user.subscriptionStatus } });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
@@ -48,10 +28,7 @@ router.post("/login", async (req, res) => {
     if (!user || !(await user.matchPassword(password)))
       return res.status(401).json({ success: false, message: "Invalid email or password" });
     const token = generateToken(user._id);
-    res.json({
-      success: true, token,
-      user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, position: user.position, availability: user.availability, avatar: user.avatar, subscriptionStatus: user.subscriptionStatus },
-    });
+    res.json({ success: true, token, user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, position: user.position, availability: user.availability, avatar: user.avatar, subscriptionStatus: user.subscriptionStatus } });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
@@ -59,10 +36,7 @@ router.post("/login", async (req, res) => {
 router.get("/me", protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    res.json({
-      success: true,
-      user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, position: user.position, availability: user.availability, availabilitySchedule: user.availabilitySchedule, noShows: user.noShows, coveragePercent: user.coveragePercent, lastAttendance: user.lastAttendance, avatar: user.avatar, subscriptionStatus: user.subscriptionStatus },
-    });
+    res.json({ success: true, user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, position: user.position, availability: user.availability, availabilitySchedule: user.availabilitySchedule, noShows: user.noShows, coveragePercent: user.coveragePercent, lastAttendance: user.lastAttendance, avatar: user.avatar, subscriptionStatus: user.subscriptionStatus } });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
@@ -75,51 +49,38 @@ router.put("/me", protect, async (req, res) => {
   } catch (err) { res.status(400).json({ success: false, message: err.message }); }
 });
 
-// POST /api/auth/forgot-password
-router.post("/forgot-password", async (req, res) => {
+// PUT /api/auth/change-password — change password while logged in
+router.put("/change-password", protect, async (req, res) => {
   try {
-    const user = await User.findOne({ email: req.body.email });
-    if (!user) return res.status(404).json({ success: false, message: "No account with that email" });
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    user.resetPasswordToken  = crypto.createHash("sha256").update(resetToken).digest("hex");
-    user.resetPasswordExpire = Date.now() + 30 * 60 * 1000;
-    await user.save({ validateBeforeSave: false });
-    const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password/${resetToken}`;
-    try {
-      const nodemailer  = require("nodemailer");
-      const transporter = nodemailer.createTransport({ service:"gmail", auth:{ user:process.env.EMAIL_USER, pass:process.env.EMAIL_PASS } });
-      await transporter.sendMail({ from:`"SHIFT-UP" <${process.env.EMAIL_USER}>`, to:user.email, subject:"Password Reset — SHIFT-UP", html:`<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px"><h2 style="color:#f5b800">SHIFT-UP</h2><p>Click below to reset your password. Link expires in 30 minutes.</p><a href="${resetUrl}" style="display:inline-block;padding:12px 28px;background:#f5b800;color:#1a1a1a;border-radius:8px;font-weight:700;text-decoration:none">Reset Password</a></div>` });
-      res.json({ success: true, message: "Reset email sent" });
-    } catch {
-      user.resetPasswordToken = undefined; user.resetPasswordExpire = undefined;
-      await user.save({ validateBeforeSave: false });
-      res.status(500).json({ success: false, message: "Email could not be sent" });
-    }
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-});
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword)
+      return res.status(400).json({ success: false, message: "Current and new password required" });
+    if (newPassword.length < 6)
+      return res.status(400).json({ success: false, message: "New password must be at least 6 characters" });
 
-// POST /api/auth/reset-password/:token
-router.post("/reset-password/:token", async (req, res) => {
-  try {
-    const hashed = crypto.createHash("sha256").update(req.params.token).digest("hex");
-    const user   = await User.findOne({ resetPasswordToken: hashed, resetPasswordExpire: { $gt: Date.now() } });
-    if (!user) return res.status(400).json({ success: false, message: "Invalid or expired reset token" });
-    user.password = req.body.password;
-    user.resetPasswordToken = undefined; user.resetPasswordExpire = undefined;
+    const user = await User.findById(req.user._id).select("+password");
+    if (!(await user.matchPassword(currentPassword)))
+      return res.status(401).json({ success: false, message: "Current password is incorrect" });
+
+    user.password = newPassword;
     await user.save();
-    res.json({ success: true, message: "Password reset successful", token: generateToken(user._id) });
+    res.json({ success: true, message: "Password changed successfully" });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
 // Google OAuth
 router.get("/google", (req, res, next) => {
   const role = ["employee","manager","owner"].includes(req.query.role) ? req.query.role : "employee";
-  passport.authenticate("google", { scope:["profile","email"], session:false, state:role })(req, res, next);
+  passport.authenticate("google", { scope: ["profile","email"], session: false, state: role })(req, res, next);
 });
 
 router.get("/google/callback", (req, res, next) => {
   if (req.query.state) req.query.role = req.query.state;
-  passport.authenticate("google", { session:false, failureRedirect:`${process.env.FRONTEND_URL || "http://localhost:3000"}/login?error=google_failed` })(req, res, next);
-}, (req, res) => oauthSuccess(req.user, res));
+  passport.authenticate("google", { session: false, failureRedirect: `${process.env.FRONTEND_URL || "http://localhost:3000"}/login?error=google_failed` })(req, res, next);
+}, (req, res) => {
+  const token = generateToken(req.user._id);
+  const data  = encodeURIComponent(JSON.stringify({ token, user: { id: req.user._id, firstName: req.user.firstName, lastName: req.user.lastName, email: req.user.email, role: req.user.role, subscriptionStatus: req.user.subscriptionStatus } }));
+  res.redirect(`${process.env.FRONTEND_URL || "http://localhost:3000"}/oauth/callback?data=${data}`);
+});
 
 module.exports = router;
