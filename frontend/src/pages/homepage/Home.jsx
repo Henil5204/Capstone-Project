@@ -1,29 +1,35 @@
-import React, { useEffect, useState } from "react";
-import "../../App.css";
-import { useLanguage } from "../../context/LanguageContext";
-import LanguageSwitcher from "../../components/LanguageSwitcher";
+import React, { useEffect, useState, useRef } from "react";
+  import "../../App.css";
+  import "./Home.css";
+  import { useLanguage } from "../../context/LanguageContext";
+  import LanguageSwitcher from "../../components/LanguageSwitcher";
+  import ContactForm from "../../components/ContactForm";
 
-const Home = ({ onGetStarted, onLoginClick }) => {
-  const { t } = useLanguage();
-  const [showHeader, setShowHeader] = useState(true);
-  const [lastY, setLastY] = useState(0);
+  function useFadeIn() {
+    const ref = useRef(null);
+    const [visible, setVisible] = useState(false);
+    useEffect(() => {
+      const el = ref.current;
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect(); } },
+        { threshold: 0.1 }
+      );
+      obs.observe(el);
+      return () => obs.disconnect();
+    }, []);
+    return [ref, visible];
+  }
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowHeader(window.scrollY < lastY || window.scrollY < 60);
-      setLastY(window.scrollY);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastY]);
+  const CYCLE_WORDS = ["group chats.", "sticky notes.", "spreadsheets.", "text threads."];
 
   const features = [
-    ["📅", "Scheduling",           "Plan shifts in minutes with intelligent scheduling that respects employee availability, roles, and staffing needs."],
-    ["📊", "Reports & Analytics",  "Access coverage and staffing reports instantly with cost breakdowns."],
-    ["🔄", "Shift Swap",           "Employees submit swap requests through a guided workflow, keeping changes organized."],
-    ["✅", "Manager Approvals",    "Approve or reject swap requests while maintaining full control over coverage."],
-    ["🔔", "Smart Notifications",  "Automatic alerts keep managers and staff informed about schedules and changes."],
-    ["📈", "Manager Dashboard",    "Monitor hours, coverage, and upcoming shifts at a glance."],
+    { title: "Scheduling",        desc: "Build the week's schedule in minutes. Set availability, assign roles, and publish — your team is notified instantly." },
+    { title: "Shift Swaps",       desc: "Employees request swaps through the app. Managers approve in one tap. No back-and-forth." },
+    { title: "Manager Dashboard", desc: "Who's in, who's out, what's pending — all in one place without digging through messages." },
+    { title: "Notifications",     desc: "Shift added, swap approved, schedule changed — the right people find out automatically." },
+    { title: "Reports",           desc: "Pull coverage and hours for any period. Built for payroll, not just demos." },
+    { title: "Approvals",         desc: "Every swap goes through you. Full context, one decision." },
   ];
 
   const pricingItems = [
@@ -33,131 +39,189 @@ const Home = ({ onGetStarted, onLoginClick }) => {
     "Manager dashboard",
   ];
 
-  // Stats cards — renamed from `t` to `stat` to avoid shadowing the translation function
-  const heroStats = ["⚡ 3 Pending Swaps", "✅ 95% Coverage"];
+  const Home = ({ onGetStarted, onLoginClick }) => {
+    const { t } = useLanguage();
 
-  return (
-    <div style={{ fontFamily: "var(--font-body)", color: "#1a1a1a" }}>
+    const [showHeader, setShowHeader] = useState(true);
+    const lastYRef = useRef(0);
+    useEffect(() => {
+      const handle = () => {
+        setShowHeader(window.scrollY < lastYRef.current || window.scrollY < 60);
+        lastYRef.current = window.scrollY;
+      };
+      window.addEventListener("scroll", handle, { passive: true });
+      return () => window.removeEventListener("scroll", handle);
+    }, []);
 
-      {/* HEADER */}
-      <header
-        className="su-header"
-        style={{ opacity: showHeader ? 1 : 0, transition: "opacity 0.3s", position: "sticky", top: 0, zIndex: 100 }}
-      >
-        <div className="su-brand">
-          <div className="su-logobox">UP</div>
-          {t("appName")}
-        </div>
-        <nav className="su-nav">
-          <a href="#features" className="su-navbtn" style={{ textDecoration: "none", color: "#1a1a1a" }}>{t("featuresTitle")}</a>
-          <a href="#pricing"  className="su-navbtn" style={{ textDecoration: "none", color: "#1a1a1a" }}>{t("pricingTitle")}</a>
-          <LanguageSwitcher />
-          <button className="su-btn su-btn-outline su-btn-sm" onClick={onLoginClick}>{t("login")}</button>
-          <button className="su-btn su-btn-black su-btn-sm"   onClick={onGetStarted}>{t("getStarted")}</button>
-        </nav>
-      </header>
+    const [wordIdx, setWordIdx] = useState(0);
+    const [wordOut, setWordOut] = useState(false);
+    useEffect(() => {
+      const id = setInterval(() => {
+        setWordOut(true);
+        setTimeout(() => {
+          setWordIdx(i => (i + 1) % CYCLE_WORDS.length);
+          setWordOut(false);
+        }, 350);
+      }, 2400);
+      return () => clearInterval(id);
+    }, []);
 
-      {/* HERO */}
-      <section style={{ background: "#1a1a1a", padding: "72px 56px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 36, alignItems: "center" }}>
-        <div>
-          <h1 style={{ fontFamily: "var(--font-head)", fontSize: 62, color: "#fff", lineHeight: 1.05 }}>
-            {t("heroTitle")}
-          </h1>
-          <p style={{ color: "#aaa", marginTop: 12, fontSize: 15, lineHeight: 1.7 }}>
-            {t("heroSubtitle")}
-          </p>
-          <button className="su-btn su-btn-yellow mt-4" onClick={onGetStarted}>{t("getStarted")} →</button>
-        </div>
-        <div style={{ background: "#f5b800", borderRadius: 18, padding: 28 }}>
-          <div style={{ background: "#1a1a1a", borderRadius: 12, padding: 20, color: "#fff" }}>
-            <div className="text-xs text-muted mb-2" style={{ color: "#666" }}>{t("todaysCoverage")}</div>
-            {[["Front", "Maria G."], ["Kitchen", "Kevin C."], ["Bar", "Sarah T."], ["Waitstaff", "John M."]].map(([area, emp]) => (
-              <div key={area} className="flex justify-between mt-2 text-sm" style={{ borderBottom: "1px solid #333", paddingBottom: 6 }}>
-                <span style={{ color: "#888" }}>{area}</span><span>{emp}</span>
+    const [featRef,    featVis]    = useFadeIn();
+    const [pricingRef, pricingVis] = useFadeIn();
+    const [contactRef, contactVis] = useFadeIn();
+
+    return (
+      <div style={{ fontFamily: "var(--font-body)", color: "#1a1a1a", background: "#f7f6f2" }}>
+
+        <header
+          className="su-header home-header"
+          style={{ opacity: showHeader ? 1 : 0, transition: "opacity 0.3s" }}
+        >
+          <div className="su-brand">
+            <div className="su-logobox">SU</div>
+            {t("appName")}
+          </div>
+          <nav className="su-nav">
+            <a href="#features" className="su-navbtn" style={{ textDecoration: "none", color: "#1a1a1a" }}>Features</a>
+            <a href="#about"    className="su-navbtn" style={{ textDecoration: "none", color: "#1a1a1a" }}>About</a>
+            <a href="#pricing"  className="su-navbtn" style={{ textDecoration: "none", color: "#1a1a1a" }}>Pricing</a>
+            <a href="#contact"  className="su-navbtn" style={{ textDecoration: "none", color: "#1a1a1a" }}>Contact</a>
+            <LanguageSwitcher />
+            <button className="su-btn su-btn-outline su-btn-sm" onClick={onLoginClick}>{t("login")}</button>
+            <button className="su-btn su-btn-black su-btn-sm"   onClick={onGetStarted}>{t("getStarted")}</button>
+          </nav>
+        </header>
+
+        <section className="hero-section hero-section-left">
+          <div className="hero-copy hero-copy-animate">
+            <p className="hero-eyebrow">Shift scheduling for restaurants</p>
+            <h1 className="hero-h1">
+              Stop managing<br />shifts in{" "}
+              <span className={`hero-word ${wordOut ? "hero-word-out" : "hero-word-in"}`}>
+                {CYCLE_WORDS[wordIdx]}
+              </span>
+            </h1>
+            <p className="hero-sub">
+              Shift-Up gives managers a real schedule they can publish, and gives employees one place to see it. Swaps go through the app — not through you.
+            </p>
+            <div className="hero-ctas">
+              <button className="cta-primary" onClick={onGetStarted}>Try it free — 7 days</button>
+              <button className="cta-secondary" onClick={onLoginClick}>Log in</button>
+            </div>
+            <p className="hero-fine">No credit card. No sales call. Just the app.</p>
+          </div>
+        </section>
+
+        <section
+          id="features"
+          ref={featRef}
+          className={`features-section ${featVis ? "section-visible" : "section-hidden"}`}
+        >
+          <div className="features-header">
+            <h2 className="section-title">Everything you need</h2>
+            <p className="section-sub">
+              Built for businesses where the schedule changes every week and half the team doesn't have work email.
+            </p>
+          </div>
+          <div className="features-grid">
+            {features.map(({ title, desc }, i) => (
+              <div
+                key={title}
+                className="feature-cell"
+                style={{ transitionDelay: featVis ? `${i * 60}ms` : "0ms" }}
+              >
+                <div className="feature-dot" />
+                <h3 className="feature-title">{title}</h3>
+                <p className="feature-desc">{desc}</p>
               </div>
             ))}
           </div>
-          <div className="flex gap-2 mt-3">
-            {heroStats.map((stat) => (
-              <div key={stat} style={{ flex: 1, background: "rgba(0,0,0,.15)", borderRadius: 9, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>{stat}</div>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* FEATURES */}
-      <section style={{ padding: "56px 56px" }} id="features">
-        <h2 style={{ fontFamily: "var(--font-head)", fontSize: 38, marginBottom: 22 }}>{t("featuresTitle")}</h2>
-        <div className="su-g3" style={{ gap: 14 }}>
-          {features.map(([icon, title, desc]) => (
-            <div key={title} className="su-card">
-              <div style={{ fontSize: 26 }}>{icon}</div>
-              <h3 style={{ fontSize: 14, fontWeight: 700, margin: "10px 0 8px" }}>{title}</h3>
-              <p style={{ fontSize: 13, color: "#666", lineHeight: 1.6 }}>{desc}</p>
+        <section
+          id="pricing"
+          ref={pricingRef}
+          className={`pricing-section ${pricingVis ? "section-visible" : "section-hidden"}`}
+        >
+          <h2 className="pricing-heading">SIMPLE PRICING</h2>
+          <p className="pricing-subheading">Start free for 7 days. Then just $5 CAD/month.</p>
+
+          <div className="pricing-card">
+            <div className="pricing-card-header">
+              <div className="pricing-trial-left">
+                <span className="pricing-t-badge">T</span>
+                <div>
+                  <div className="pricing-trial-title">7-Day Free Trial</div>
+                  <div className="pricing-trial-sub">No charge until trial ends. Cancel anytime</div>
+                </div>
+              </div>
+              <span className="pricing-free-badge">FREE</span>
             </div>
-          ))}
-        </div>
-      </section>
 
-      {/* PRICING */}
-      <section style={{ background: "#1a1a1a", padding: "72px 40px", textAlign: "center" }} id="pricing">
-        <h2 style={{ fontFamily: "var(--font-head)", fontSize: 48, color: "#fff", marginBottom: 8 }}>{t("pricingTitle")}</h2>
-        <p style={{ color: "#888", fontSize: 16, marginBottom: 48 }}>Start free for 7 days. Then just $5 CAD/month.</p>
-
-        <div style={{ maxWidth: 420, margin: "0 auto" }}>
-          {/* Trial banner */}
-          <div style={{ background: "linear-gradient(135deg,#f5b800,#ffdd57)", borderRadius: "16px 16px 0 0", padding: "14px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ textAlign: "left" }}>
-              <div style={{ fontWeight: 900, fontSize: 15, color: "#1a1a1a" }}>🎁 7-Day Free Trial</div>
-              <div style={{ fontSize: 12, color: "#1a1a1a", opacity: .7 }}>No charge until trial ends · Cancel anytime</div>
-            </div>
-            <div style={{ fontFamily: "var(--font-head)", fontSize: 24, color: "#1a1a1a", fontWeight: 900 }}>FREE</div>
-          </div>
-
-          {/* Card */}
-          <div style={{ background: "#222", borderRadius: "0 0 20px 20px", padding: "28px 32px", border: "2px solid #f5b800", borderTop: "none" }}>
-            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 6, marginBottom: 24 }}>
-              <span style={{ fontFamily: "var(--font-head)", fontSize: 64, color: "#f5b800", lineHeight: 1 }}>$5</span>
-              <div style={{ paddingBottom: 8, textAlign: "left" }}>
-                <div style={{ color: "#f5b800", fontSize: 13, fontWeight: 700 }}>CAD</div>
-                <div style={{ color: "#666", fontSize: 12 }}>{t("perMonth")} after trial</div>
+            <div className="pricing-card-price">
+              <span className="pricing-big-dollar">$5</span>
+              <div className="pricing-cad-wrap">
+                <span className="pricing-cad">CAD</span>
+                <span className="pricing-mo">/mo after trial</span>
               </div>
             </div>
 
-            <ul style={{ listStyle: "none", margin: "0 0 24px", textAlign: "left", padding: 0 }}>
+            <ul className="pricing-card-list">
               {pricingItems.map((item) => (
-                <li key={item} style={{ padding: "8px 0", fontSize: 14, borderBottom: "1px solid #333", color: "#ccc", display: "flex", gap: 10, alignItems: "center" }}>
-                  <span style={{ color: "#f5b800", fontWeight: 900 }}>✓</span> {item}
+                <li key={item} className="pricing-card-item">
+                  <span className="pricing-check">✓</span>
+                  {item}
                 </li>
               ))}
             </ul>
 
-            <button
-              className="su-btn su-btn-yellow w-full"
-              onClick={onGetStarted}
-              style={{ width: "100%", padding: "14px", fontSize: 15, fontWeight: 800, background: "#f5b800", color: "#1a1a1a", border: "none", borderRadius: 10, cursor: "pointer", fontFamily: "var(--font-body)" }}
-            >
-              🚀 Start Free Trial → No Credit Card Required
+            <button className="pricing-card-cta" onClick={onGetStarted}>
+              🔒 Start Free Trial — No Credit Card Required
             </button>
 
-            <div style={{ fontSize: 11, color: "#555", marginTop: 10 }}>🔒 Powered by Stripe · Cancel anytime</div>
+            <p className="pricing-card-stripe">🔒 Powered by Stripe · Cancel anytime</p>
           </div>
+        </section>
+
+        <section style={{ padding: "56px", background: "#fff" }} id="about">
+          <h2 style={{ fontFamily: "var(--font-head)", fontSize: 38, marginBottom: 14 }}>ABOUT SHIFT-UP</h2>
+          <p style={{ color: "#555", fontSize: 14, lineHeight: 1.7, maxWidth: 620, marginBottom: 10 }}>
+            At ShiftUp, we believe in empowering businesses with smarter, more efficient ways to manage their workforce.
+          </p>
+          <p style={{ color: "#555", fontSize: 14, lineHeight: 1.7, maxWidth: 620 }}>
+            Create and publish schedules in minutes, employees view shifts in real-time, and managers can communicate effectively with their entire team.
+          </p>
+        </section>
+
+        <div
+          ref={contactRef}
+          className={contactVis ? "section-visible" : "section-hidden"}
+        >
+          <ContactForm />
         </div>
-      </section>
 
-      {/* ABOUT */}
-      <section style={{ padding: "56px", background: "#fff" }} id="about">
-        <h2 style={{ fontFamily: "var(--font-head)", fontSize: 38, marginBottom: 14 }}>ABOUT SHIFT-UP</h2>
-        <p style={{ color: "#555", fontSize: 14, lineHeight: 1.7, maxWidth: 620, marginBottom: 10 }}>
-          At ShiftUp, we believe in empowering businesses with smarter, more efficient ways to manage their workforce.
-        </p>
-        <p style={{ color: "#555", fontSize: 14, lineHeight: 1.7, maxWidth: 620 }}>
-          Create and publish schedules in minutes, employees view shifts in real-time, and managers can communicate effectively with their entire team.
-        </p>
-      </section>
+        <footer className="home-footer">
+          <div className="su-brand" style={{ color: "#fff" }}>
+            <div className="su-logobox">SU</div>
+            {t("appName")}
+          </div>
+          <p style={{ color: "#444", fontSize: 12 }}>© {new Date().getFullYear()} Shift-Up</p>
+          <div style={{ display: "flex", gap: 24 }}>
+            {[["Features","#features"],["About","#about"],["Pricing","#pricing"],["Contact","#contact"]].map(([label, href]) => (
+              <a key={label} href={href} style={{ color: "#555", fontSize: 13, textDecoration: "none" }}>{label}</a>
+            ))}
+            <button
+              onClick={onLoginClick}
+              style={{ color: "#555", fontSize: 13, background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-body)", padding: 0 }}
+            >
+              Log in
+            </button>
+          </div>
+        </footer>
 
-    </div>
-  );
-};
+      </div>
+    );
+  };
 
-export default Home;
+  export default Home;
+  

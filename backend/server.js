@@ -88,6 +88,7 @@ app.use("/api/dashboard",     require("./routes/dashboard"));
 app.use("/api/tips",          require("./routes/tips"));
 app.use("/api/attendance",    require("./routes/attendance"));
 app.use("/api/subscription",  require("./routes/subscription"));
+app.use("/api/contact",        require("./routes/contact"));
 
 // ── Health check ───────────────────────────────────────────────────────────
 app.get("/api/health", (req, res) =>
