@@ -1,65 +1,63 @@
 import React, { useState } from "react";
+import api from "../api";
 
-  export default function ContactForm() {
-    const [name,     setName]    = useState("");
-    const [email,    setEmail]   = useState("");
-    const [message,  setMessage] = useState("");
-    const [status,   setStatus]  = useState("idle");
-    const [errorMsg, setErrorMsg]= useState("");
+export default function ContactForm() {
+  const [form,        setForm]        = useState({ name:"", email:"", message:"" });
+  const [loading,     setLoading]     = useState(false);
+  const [success,     setSuccess]     = useState("");
+  const [error,       setError]       = useState("");
 
-    const handleSubmit = async (e) => {
-      e.preventDefault();
-      if (!name.trim() || !email.trim() || !message.trim()) return;
-      setStatus("sending");
-      setErrorMsg("");
-      try {
-        const res  = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5000"}/api/contact`, {
-          method:  "POST",
-          headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ name, email, message }),
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          setStatus("success");
-          setName(""); setEmail(""); setMessage("");
-          setTimeout(() => setStatus("idle"), 6000);
-        } else {
-          setErrorMsg(data.error || "Something went wrong. Please try again.");
-          setStatus("error");
-          setTimeout(() => setStatus("idle"), 6000);
-        }
-      } catch {
-        setErrorMsg("Network error. Please check your connection and try again.");
-        setStatus("error");
-        setTimeout(() => setStatus("idle"), 6000);
-      }
-    };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name || !form.email || !form.message) { setError("Please fill in all fields."); return; }
+    setLoading(true); setError(""); setSuccess("");
+    try {
+      const res = await api.post("/contact", form);
+      setSuccess(res.data.message || "Message sent! We'll get back to you within 1–2 business days.");
+      setForm({ name:"", email:"", message:"" });
+    } catch(err) {
+      setError(err.response?.data?.message || "Failed to send. Please try again.");
+    } finally { setLoading(false); }
+  };
 
-    return (
-      <section className="contact-section" id="contact">
-        <div className="contact-container">
-          <h2 style={{ fontFamily: "var(--font-head)", fontSize: 38, marginBottom: 8, color: "#1a1a1a" }}>
-            Contact Us
-          </h2>
-          <p style={{ color: "#666", fontSize: 15, lineHeight: 1.7 }}>
-            Have a question or want to learn more? Send us a message and we'll get back to you.
-          </p>
-          <form className="contact-form" onSubmit={handleSubmit}>
-            <input type="text"  placeholder="Your Name"    value={name}    onChange={e => setName(e.target.value)}    required />
-            <input type="email" placeholder="Your Email"   value={email}   onChange={e => setEmail(e.target.value)}   required />
-            <textarea           placeholder="Your Message" value={message} onChange={e => setMessage(e.target.value)} required />
-            <button type="submit" className="contact-submit" disabled={status === "sending"}>
-              {status === "sending" ? "Sending…" : "Send Message"}
-            </button>
-          </form>
-          {status === "success" && (
-            <div className="contact-success">✓ Your message has been sent! We'll get back to you soon.</div>
-          )}
-          {status === "error" && (
-            <div className="contact-error">{errorMsg || "Something went wrong. Please try again or email shiftup457@gmail.com."}</div>
-          )}
-        </div>
-      </section>
-    );
-  }
-  
+  return (
+    <section id="contact" className="contact-section">
+      <div className="contact-container">
+        <h2 className="section-title">Get In Touch</h2>
+        <p className="section-sub">
+          Have a question about SHIFT-UP? We'll get back to you within 1–2 business days.
+        </p>
+
+        <form className="contact-form" onSubmit={handleSubmit}>
+          <input
+            type="text"
+            placeholder="Your Name"
+            value={form.name}
+            onChange={e => setForm(f => ({ ...f, name:e.target.value }))}
+            required
+          />
+          <input
+            type="email"
+            placeholder="Your Email"
+            value={form.email}
+            onChange={e => setForm(f => ({ ...f, email:e.target.value }))}
+            required
+          />
+          <textarea
+            placeholder="Your message…"
+            value={form.message}
+            onChange={e => setForm(f => ({ ...f, message:e.target.value }))}
+            required
+          />
+
+          {error   && <div className="contact-error">⚠️ {error}</div>}
+          {success && <div className="contact-success">✅ {success}</div>}
+
+          <button type="submit" className="contact-submit" disabled={loading}>
+            {loading ? "Sending…" : "Send Message →"}
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+}
